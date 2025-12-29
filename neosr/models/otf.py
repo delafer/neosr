@@ -152,7 +152,7 @@ class otf(image):  # type: ignore[reportGeneralTypeIssues]
             # JPEG compression
             if self.opt.get('jpeg_compress', True):
                jpeg_p = out.new_zeros(out.size(0)).uniform_(*self.opt['jpeg_range'])
-               
+
                # clamp to [0, 1], otherwise JPEGer will result in unpleasant artifacts
                out = torch.clamp(out, 0, 1)
                out = self.jpeger(out, quality=jpeg_p)
@@ -201,13 +201,13 @@ class otf(image):  # type: ignore[reportGeneralTypeIssues]
                     rounds=False,
                     gray_prob=gray_noise_prob,
                 )
-            # else:
-            #     out = random_add_poisson_noise_pt(
-            #         out,
-            #         scale_range=self.opt['poisson_scale_range2'],
-            #         gray_prob=gray_noise_prob,
-            #         clip=True,
-            #         rounds=False)
+            else:
+                out = random_add_poisson_noise_pt(
+                    out,
+                    scale_range=self.opt['poisson_scale_range2'],
+                    gray_prob=gray_noise_prob,
+                    clip=True,
+                    rounds=False)
 
             # JPEG compression + the final sinc filter
             # We also need to resize images to desired sizes. We group [resize back + sinc filter] together

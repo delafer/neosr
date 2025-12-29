@@ -990,7 +990,7 @@ class srformer(nn.Module):
         img_size=64,
         patch_size=1,
         in_chans=3,
-                 out_chans=3,
+        out_chans=3,
         embed_dim=60,
         depths=(6, 6, 6, 6),
         num_heads=(6, 6, 6, 6),

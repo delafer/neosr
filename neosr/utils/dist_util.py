@@ -13,7 +13,9 @@ def _init_dist_pytorch(backend: str, **kwargs) -> None:
     rank = int(os.environ["RANK"])
     num_gpus = torch.cuda.device_count()
     torch.cuda.set_device(rank % num_gpus)
-    dist.init_process_group(backend=backend, **kwargs)
+    
+    if not dist.is_initialized():
+        dist.init_process_group(backend=backend, **kwargs)
 
 
 def _init_dist_slurm(backend: str, port: int) -> None:

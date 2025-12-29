@@ -221,7 +221,7 @@ def apply_augment(
         "cutblur",
     ),
     prob: tuple[float, float, float, float, float] = (0.1, 0.3, 0.2, 0.7, 0.8),
-    multi_prob: float = 0.3,
+    multi_prob: float = 0.3
 ) -> tuple[Tensor, Tensor]:
     r"""Applies Augmentations.
 
@@ -246,9 +246,9 @@ def apply_augment(
         raise ValueError(msg)
 
     # match resolutions
-    modes = ["bilinear", "bicubic"]
-    if scale > 1:
-        img_lq = torch.clamp(
+    # modes = ["bilinear", "bicubic"]
+    # if scale > 1:
+    #     img_lq = torch.clamp(
             F.interpolate(img_lq, scale_factor=scale, mode=random.choice(modes)), 0, 1
         )
 
@@ -283,10 +283,9 @@ def apply_augment(
         elif "cutblur" in aug:
             img_gt, img_lq = cutblur(img_gt, img_lq)
 
-    # back to original resolution
-    if scale > 1:
-        img_lq = torch.clamp(
-            F.interpolate(img_lq, scale_factor=1 / scale, mode="bicubic"), 0, 1
-        )
+            # back to original resolution
+            # if scale > 1:
+            #     img_lq = F.interpolate(img_lq, scale_factor=1 / scale, mode="bicubic")
 
-    return img_gt, img_lq
+
+return img_gt, img_lq

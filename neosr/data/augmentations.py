@@ -246,9 +246,9 @@ def apply_augment(
         raise ValueError(msg)
 
     # match resolutions
-    # modes = ["bilinear", "bicubic"]
-    # if scale > 1:
-    #     img_lq = torch.clamp(
+    modes = ["bilinear", "bicubic"]
+    if scale > 1:
+        img_lq = torch.clamp(
             F.interpolate(img_lq, scale_factor=scale, mode=random.choice(modes)), 0, 1
         )
 
@@ -283,9 +283,11 @@ def apply_augment(
         elif "cutblur" in aug:
             img_gt, img_lq = cutblur(img_gt, img_lq)
 
-            # back to original resolution
-            # if scale > 1:
-            #     img_lq = F.interpolate(img_lq, scale_factor=1 / scale, mode="bicubic")
+    # back to original resolution
+    if scale > 1:
+        img_lq = torch.clamp(
+            F.interpolate(img_lq, scale_factor=1 / scale, mode="bicubic"), 0, 1
+        )
 
 
 return img_gt, img_lq

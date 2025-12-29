@@ -126,7 +126,8 @@ class otf(image):  # type: ignore[reportGeneralTypeIssues]
             else:
                 scale = 1
             mode = random.choice(["area", "bilinear", "bicubic"])
-            # out = F.interpolate(out, scale_factor=scale, mode=mode)
+            out = F.interpolate(out, scale_factor=scale, mode=mode)
+
             # add noise
             gray_noise_prob = self.opt["datasets"]["train"].get("gray_noise_prob", None)
             if rng.uniform() < self.opt["datasets"]["train"].get(  # type: ignore[attr-defined]
@@ -139,22 +140,22 @@ class otf(image):  # type: ignore[reportGeneralTypeIssues]
                     rounds=False,
                     gray_prob=gray_noise_prob,
                 )
-            # else:
-            #     out = random_add_poisson_noise_pt(
-            #         out,
-            #         scale_range=self.opt['poisson_scale_range'],
-            #         gray_prob=gray_noise_prob,
-            #         clip=True,
-            #         rounds=False)
+            else:
+                out = random_add_poisson_noise_pt(
+                    out,
+                    scale_range=self.opt['poisson_scale_range'],
+                    gray_prob=gray_noise_prob,
+                    clip=True,
+                    rounds=False)
 
 
             # JPEG compression
-            #if self.opt.get('jpeg_compress', True):
-            #    jpeg_p = out.new_zeros(out.size(0)).uniform_(
-            #        *self.opt['jpeg_range'])
-            #    # clamp to [0, 1], otherwise JPEGer will result in unpleasant artifacts
-            #    out = torch.clamp(out, 0, 1)
-            #    out = self.jpeger(out, quality=jpeg_p)
+            if self.opt.get('jpeg_compress', True):
+               jpeg_p = out.new_zeros(out.size(0)).uniform_(*self.opt['jpeg_range'])
+               
+               # clamp to [0, 1], otherwise JPEGer will result in unpleasant artifacts
+               out = torch.clamp(out, 0, 1)
+               out = self.jpeger(out, quality=jpeg_p)
 
             # ----------------------- The second degradation process ----------------------- #
             # blur

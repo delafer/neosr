@@ -37,8 +37,8 @@ def calculate_psnr(
     Returns:
     -------
         float: PSNR result.
-    """
 
+    """
     assert img.shape == img2.shape, (
         f"Image shapes are different: {img.shape}, {img2.shape}."
     )
@@ -59,7 +59,7 @@ def calculate_psnr(
     img = img.astype(np.float64)
     img2 = img2.astype(np.float64)
 
-    mse = np.mean((img - img2)**2)
+    mse = np.mean((img - img2) ** 2)
     if mse <= 0:
         return float("inf")
     return 10.0 * np.log10(255.0 * 255.0 / mse)
@@ -135,8 +135,8 @@ def calculate_ssim(
     Returns:
     -------
         float: SSIM result.
-    """
 
+    """
     assert img.shape == img2.shape, (
         f"Image shapes are different: {img.shape}, {img2.shape}."
     )
@@ -181,24 +181,22 @@ def calculate_dists(
     Returns:
     -------
         float: SSIM result.
+
     """
-
-
-
     assert img.shape == img2.shape, (
         f"Image shapes are different: {img.shape}, {img2.shape}."
     )
 
-    # to tensor
+    # satisfy mypy
     img, img2 = cast("Tensor", img2tensor([img, img2]))
     # normalize to [0, 1]
-    img, img2 = img/255, img2/255
+    img, img2 = img / 255, img2 / 255
     # add dim
     if isinstance(img, Tensor) and isinstance(img2, Tensor):
-    img, img2 = img.unsqueeze_(0), img2.unsqueeze_(0)
-    # to cuda
-    device = torch.device("cuda")
-    img, img2 = img.to(device), img2.to(device)
+        img, img2 = img.unsqueeze_(0), img2.unsqueeze_(0)
+        # to cuda
+        device = torch.device("cuda")
+        img, img2 = img.to(device), img2.to(device)
 
     loss = dists_loss(as_loss=False)  # type: ignore[reportCallIssue]
     return loss.forward(img, img2)
@@ -233,8 +231,8 @@ def calculate_topiq(
     # add dim
     if isinstance(img, Tensor) and isinstance(img2, Tensor):
         img, img2 = img.unsqueeze_(0), img2.unsqueeze_(0)
-    # to cuda
-    device = torch.device("cuda")
+        # to cuda
+        device = torch.device("cuda") # get cuda device
         img, img2 = img.to(device), img2.to(device)
 
     loss = topiq()  # type: ignore[reportCallIssue]

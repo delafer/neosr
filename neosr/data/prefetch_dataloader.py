@@ -1,7 +1,6 @@
-import queue as Queue
-from collections.abc import Iterator
+import queue
 from threading import Thread
-from typing import Any
+from typing import Any, Iterator
 
 import torch
 from torch.utils.data import DataLoader

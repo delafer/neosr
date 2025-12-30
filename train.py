@@ -3,9 +3,11 @@
 # model building, optimization, logging, validation, and checkpoint management.
 
 import datetime
+import importlib
 import logging
 import math
 import re
+import subprocess
 import sys
 import time
 from os import path as osp
@@ -35,11 +37,10 @@ from neosr.utils import (
     tc,
 )
 from neosr.utils.options import copy_opt_file, parse_options
-from torchprofile import profile_macs
 
 # Ensure minimum supported Python version is 3.13
-if sys.version_info.major != 3 or sys.version_info.minor != 13:
-    msg = f"{tc.red}Python version 3.13 is required.{tc.end}"
+if sys.version_info < (3, 10):
+    msg = f"{tc.red}Python 3.10 or newer is required.{tc.end}"
     raise ValueError(msg)
 
 
@@ -76,6 +77,27 @@ def init_tb_loggers(opt: Dict[str, Any]) -> Union[Any, None]:
         tb_logger_log_dir = Path(opt["root_path"]) / "experiments" / "tb_logger" / opt["name"]
         tb_logger = init_tb_logger(log_dir=tb_logger_log_dir)
     return tb_logger
+
+
+def get_profile_macs():
+    """Return the torchprofile ``profile_macs`` function when available.
+
+    Raises a clear error with installation guidance when the optional
+    dependency is missing. Import is deferred to avoid a hard dependency
+    when MAC computation is not requested.
+    """
+
+    if importlib.util.find_spec("torchprofile") is None:
+        msg = (
+            "torchprofile is required to compute MACs. Install it with "
+            "`pip install torchprofile` or remove `input_size` from the configuration "
+            "to skip MAC reporting."
+        )
+        raise ModuleNotFoundError(msg)
+
+    from torchprofile import profile_macs
+
+    return profile_macs
 
 
 def create_train_val_dataloader(
@@ -224,7 +246,8 @@ def generate_calib_data(opt, calib_iters: int) -> data.DataLoader:
         num_samples,
         opt.get('in_chans', 3),
         opt['datasets']['train']['patch_size'],
-        opt['datasets']['train']['patch_size']
+        opt['datasets']['train']['patch_size'],
+        device="cpu"
     ) * 0.5 + 0.25
 
     # Build dataset wrapper
@@ -273,8 +296,11 @@ def train_pipeline(project_root: str) -> None:
     # Check for CUDA version consistency between system and PyTorch
     try:
         # Get NVIDIA CUDA driver version
-        nvcc_cmd = "nvcc --version"
-        nvcc_cuda_version_match = re.search(r"release (\d+\.\d+)", popen(nvcc_cmd).read()) # noqa: S605
+        nvcc_cmd = ["nvcc", "--version"]
+        nvcc_output = subprocess.run(
+            nvcc_cmd, check=False, capture_output=True, text=True
+        ).stdout
+        nvcc_cuda_version_match = re.search(r"release (\d+\.\d+)", nvcc_output)
         if nvcc_cuda_version_match:
             nvcc_cuda = nvcc_cuda_version_match[1]
             torch_cuda = torch.version.cuda
@@ -351,9 +377,11 @@ def train_pipeline(project_root: str) -> None:
     )
 
     # Log GPU driver version
-    smi_cmd = "nvidia-smi --query-gpu=driver_version --format=csv,noheader,nounits"
+    smi_cmd = ["nvidia-smi", "--query-gpu=driver_version", "--format=csv,noheader,nounits"]
     try:
-        driver_version = popen(smi_cmd).read().strip() # noqa: S605
+        driver_version = subprocess.run(
+            smi_cmd, check=False, capture_output=True, text=True
+        ).stdout.strip()
     except Exception:
         driver_version = "N/A (could not retrieve)"
 
@@ -374,6 +402,7 @@ def train_pipeline(project_root: str) -> None:
 
     input_size = opt.get('input_size')
     if input_size is not None:
+        profile_macs = get_profile_macs()
         inputs = torch.randn(1, input_size['in_channels'], input_size['size'], input_size['size'])
         macs = profile_macs(model.net_g, inputs)
         logger.info(f'Generator MACs: {macs:,d}')
@@ -416,11 +445,13 @@ def train_pipeline(project_root: str) -> None:
             logger.info("Reinitializing EMA model for QAT compatibility")
             model._init_ema()
 
+    accumulate = max(1, opt["datasets"]["train"].get("accumulate", 1))
+
     if resume_state:  # resume training
         # handle optimizers and schedulers
         model.resume_training(resume_state)  # type: ignore[reportAttributeAccessIssue,attr-defined]
         # Adjust iteration log for accumulation steps
-        resumed_iter_log = int(resume_state['iter'] // opt['datasets']['train'].get('accumulate', 1))
+        resumed_iter_log = int(resume_state['iter'] // accumulate)
         logger.info(
             f"{tc.light_green}Resuming training from epoch: {resume_state['epoch']}, "
             f"iteration (adjusted for accumulation): {resumed_iter_log}{tc.end}"
@@ -433,7 +464,7 @@ def train_pipeline(project_root: str) -> None:
         current_iter = 0
 
     # Initialize message logger for formatted console output
-    msg_logger = MessageLogger(opt, tb_logger, current_iter // opt['datasets']['train'].get('accumulate', 1))
+    msg_logger = MessageLogger(opt, tb_logger, current_iter // accumulate)
 
     # Initialize dataloader prefetcher for efficient data transfer to GPU
     if train_loader is not None:
@@ -489,20 +520,20 @@ def train_pipeline(project_root: str) -> None:
         logger.info("Deterministic mode enabled.")
 
     # Training loop parameters
-    accumulate = opt["datasets"]["train"].get("accumulate", 1)
     print_freq = opt["logger"].get("print_freq", 100)
     save_checkpoint_freq = opt["logger"]["save_checkpoint_freq"]
     val_freq = opt["val"]["val_freq"] if opt.get("val") is not None else 100
 
     logger.info(
         f"{tc.light_green}Starting training from epoch: {start_epoch}, "
-        f"iteration (adjusted for accumulation): {int(current_iter / accumulate)}{tc.end}"
+        f"iteration (adjusted for accumulation): {current_iter // accumulate}{tc.end}"
     )
     iter_timer = AvgTimer() # Timer for average iteration time
     start_time = time.time() # Start time for total training duration
 
     # logging file with only losses
     log_path = osp.join(opt["root_path"], "experiments", opt["name"])
+    accumulated_iter = current_iter // accumulate
 
     try:
         for epoch in range(start_epoch, total_epochs + 1):
@@ -531,14 +562,11 @@ def train_pipeline(project_root: str) -> None:
                 if current_iter == 1:
                     msg_logger.reset_start_time() # Reset logger's timer on first iteration
 
-                # Log training progress if current iteration is a multiple of print_freq
-                if current_iter >= accumulate: # Only log after accumulation steps are done
-                    current_iter_log = current_iter / accumulate
-                else:
-                    current_iter_log = current_iter # Log raw iter if still accumulating
+                accumulated_iter = (current_iter - 1) // accumulate + 1
 
-                if current_iter_log % print_freq == 0:
-                    log_vars = {"epoch": epoch, "iter": current_iter_log}
+                # Log training progress only when an optimizer step has completed
+                if current_iter % accumulate == 0 and accumulated_iter % print_freq == 0:
+                    log_vars = {"epoch": epoch, "iter": accumulated_iter}
                     log_vars.update({"lrs": model.get_current_learning_rate()})
                     log_vars.update({"gan_weight": model.get_current_gan_weight()})
                     log_vars.update({"time": iter_timer.get_avg_time()})
@@ -549,15 +577,14 @@ def train_pipeline(project_root: str) -> None:
                     # iters per second
                     iter_time = iter_time * 100
                     iter_time = 100 / iter_time
-                    accumulate = opt["datasets"]["train"].get("accumulate", 1)
                     iter_time = iter_time / accumulate
                     if iter_time < 0.5 and "debug" not in opt["name"]:
                         logger.info("Interrupted, saving latest models.")
-                        model.save(epoch, int(current_iter_log))
+                        model.save(epoch, accumulated_iter)
                         sys.exit(0)
 
                 # save models and training states
-                if current_iter_log % save_checkpoint_freq == 0:
+                if current_iter % accumulate == 0 and accumulated_iter % save_checkpoint_freq == 0:
                     free_space = check_disk_space()
                     if free_space < 500: # Check for at least 500 MB free space
                         msg = (
@@ -566,18 +593,22 @@ def train_pipeline(project_root: str) -> None:
                             "Attempting to save current progress...{tc.end}"
                         )
                         logger.error(msg)
-                        model.save(epoch, int(current_iter_log))  # type: ignore[reportFunctionMemberAccess,attr-defined]
+                        model.save(epoch, accumulated_iter)  # type: ignore[reportFunctionMemberAccess,attr-defined]
                         sys.exit(1) # Exit if disk space is critically low after saving
 
                     logger.info(f"{tc.light_green}Saving models and training states.{tc.end}")
-                    model.save(epoch, int(current_iter_log))  # type: ignore[reportFunctionMemberAccess,attr-defined]
+                    model.save(epoch, accumulated_iter)  # type: ignore[reportFunctionMemberAccess,attr-defined]
 
                 # Perform validation periodically if configured
-                if opt.get("val") is not None and (current_iter_log % val_freq == 0):
+                if (
+                    opt.get("val") is not None
+                    and current_iter % accumulate == 0
+                    and (accumulated_iter % val_freq == 0)
+                ):
                     for val_loader in val_loaders:
                         model.validation(  # type: ignore[reportFunctionMemberAccess,attr-defined]
                             val_loader,
-                            int(current_iter_log),
+                            accumulated_iter,
                             tb_logger,
                             opt["val"].get("save_img", True),
                         )
@@ -601,7 +632,7 @@ def train_pipeline(project_root: str) -> None:
         msg = f"{tc.light_green}Training interrupted by user. Saving latest models.{tc.end}"
         logger.info(msg)
         # Save current progress before exiting
-        model.save(epoch, int(current_iter_log))  # type: ignore[reportFunctionMemberAccess,attr-defined]
+        model.save(epoch, accumulated_iter)  # type: ignore[reportFunctionMemberAccess,attr-defined]
         sys.exit(0)
     except Exception as e:
         # Catch any other unexpected exceptions during the training loop
@@ -612,11 +643,10 @@ def train_pipeline(project_root: str) -> None:
 
     # Final validation after training completes
     if opt.get("val") is not None:
-        accumulate = opt["datasets"]["train"].get("accumulate", 1)
         for val_loader in val_loaders:
             model.validation(  # type: ignore[reportFunctionMemberAccess,attr-defined]
                 val_loader,
-                int(current_iter / accumulate),
+                int(current_iter // accumulate),
                 tb_logger,
                 opt["val"].get("save_img", True),
             )

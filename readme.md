@@ -1,5 +1,5 @@
 <div align="center">
-<img src="https://github.com/neosr-project/neosr/assets/132400428/54e8f7fa-8705-4ea3-8b6e-c6227117044d?sanitize=true" width="480"></img>
+<img src="./licenses/assets/neosr.jpg" alt="NEOSR Logo" width="600"></img>
 
 <a href="https://discord.gg/NN2HGtJ3d6"><img src="https://github.com/neosr-project/neosr/assets/132400428/4bd54b1d-4639-4940-b9c7-b3f212aea5c8?sanitize=true" width="100"></img></a><br>
 Join our <a href="https://discord.gg/NN2HGtJ3d6">Discord</a>
@@ -46,6 +46,75 @@ neosr-update
 
 For manual installation (recommended for cloud env) details, see our [Installation Instructions](https://github.com/neosr-project/neosr/wiki/Installation-Instructions) wiki.
 
+### 🛠️ manual dependency management (uv + conda)
+
+The project uses [`uv`](https://docs.astral.sh/uv/) with the lockfile `uv.lock` and the `uv_build` backend defined in `pyproject.toml` to keep dependencies reproducible. The steps below show how to set up, update, and run the code without the helper scripts.
+
+> [!NOTE]
+> Python 3.13 is required. If you prefer virtualenv instead of conda, replace the environment creation step with your preferred tool but keep using `uv` for installs.
+
+**Linux (e.g., Arch Linux)**
+
+1. Install Miniforge (minimal conda). Follow the [official installer](https://github.com/conda-forge/miniforge) or download and run:
+   ```bash
+   wget https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh
+   bash Miniforge3-Linux-x86_64.sh -b -p "$HOME/miniforge3"
+   source "$HOME/miniforge3/etc/profile.d/conda.sh"
+   conda config --set auto_activate_base false
+   ```
+2. Create and activate a Python 3.13 environment:
+   ```bash
+   conda create -y -n neosr python=3.13
+   conda activate neosr
+   ```
+3. Install `uv` and ensure it is on your `PATH`:
+   ```bash
+   curl -LsSf https://astral.sh/uv/install.sh | sh
+   export PATH="$HOME/.local/bin:$PATH"
+   ```
+4. Install project dependencies from the lockfile:
+   ```bash
+   uv sync --locked
+   ```
+5. Update dependencies later (optional):
+   ```bash
+   uv lock --upgrade           # refresh uv.lock to the latest compatible versions
+   uv sync --locked            # apply updated lockfile to the env
+   ```
+6. Run training or testing scripts manually:
+   ```bash
+   uv run python train.py options/your_config.toml
+   uv run python test.py options/your_config.toml
+   ```
+
+**Windows (PowerShell)**
+
+1. Install [Miniforge for Windows](https://github.com/conda-forge/miniforge) and open a Miniforge prompt.
+2. Create and activate the environment:
+   ```ps1
+   conda create -y -n neosr python=3.13
+   conda activate neosr
+   ```
+3. Install `uv`:
+   ```ps1
+   powershell -ExecutionPolicy Bypass -c "irm https://astral.sh/uv/install.ps1 | iex"
+   $env:Path = "$env:UserProfile\.local\bin;$env:Path"
+   ```
+4. Install dependencies (uses the bundled PyTorch CUDA 12.8 wheels configured in `pyproject.toml`):
+   ```ps1
+   uv sync --locked
+   ```
+5. Update dependencies later:
+   ```ps1
+   uv lock --upgrade
+   uv sync --locked
+   ```
+6. Run training or testing:
+   ```ps1
+   uv run python train.py options/your_config.toml
+   uv run python test.py options/your_config.toml
+   ```
+
 ## ⏩ quick start
 
 Start training by running:
@@ -62,71 +131,73 @@ Where `config.toml` is a configuration file. Templates can be found in [options]
 
 ### [supported archs](https://github.com/neosr-project/neosr/wiki/Arch%E2%80%90specific-options):
 
-| arch                                                                                              | option                                 			|
-|---------------------------------------------------------------------------------------------------|-----------------------------------------------------------|
-| [Real-ESRGAN](https://github.com/xinntao/Real-ESRGAN)                                             | `esrgan`                               			|
-| [SRVGGNetCompact](https://github.com/XPixelGroup/BasicSR/blob/master/basicsr/archs/srvgg_arch.py) | `compact`                              			|
-| [SwinIR](https://github.com/JingyunLiang/SwinIR)                                                  | `swinir_small`, `swinir_medium`        			|
-| [HAT](https://github.com/XPixelGroup/HAT)                                                         | `hat_s`, `hat_m`, `hat_l`              			|
-| [OmniSR](https://github.com/Francis0625/Omni-SR)                                                  | `omnisr`                               			|
-| [SRFormer](https://github.com/HVision-NKU/SRFormer)                                               | `srformer_light`, `srformer_medium`    			|
-| [DAT](https://github.com/zhengchen1999/dat)                                                       | `dat_small`, `dat_medium`, `dat_2` 			|
-| [DITN](https://github.com/yongliuy/DITN)							    | `ditn`				     	      		|
-| [DCTLSA](https://github.com/zengkun301/DCTLSA)						    | `dctlsa`							|
-| [SPAN](https://github.com/hongyuanyu/SPAN)							    | `span`, `span_fast`					|
-| [Real-CUGAN](https://github.com/bilibili/ailab)				  		    | `cugan`			   				|
-| [CRAFT](https://github.com/AVC2-UESTC/CRAFT-SR)		 				    | `craft`			   				|
-| [SAFMN](https://github.com/sunny2109/SAFMN)							    | `safmn`, `safmn_l`					|
-| [RGT](https://github.com/zhengchen1999/RGT)							    | `rgt`, `rgt_s` 						|
-| [ATD](https://github.com/LabShuHangGU/Adaptive-Token-Dictionary)   				    | `atd`, `atd_light`   					|
-| [PLKSR](https://github.com/dslisleedh/PLKSR)			     				    | `plksr`, `plksr_tiny`	    				|
-| [RealPLKSR](https://github.com/dslisleedh/PLKSR/issues/4)					    | `realplksr`, `realplksr_s`, `realplksr_l`			|
-| [DRCT](https://github.com/ming053l/DRCT)			     				    | `drct`, `drct_l`, `drct_s`   				|
-| [MSDAN](https://github.com/Supereeeee/MSDAN)			     				    | `msdan`			    				|
-| [SPANPlus](https://github.com/umzi2/SPANPlus)							    | `spanplus`, `spanplus_sts`, `spanplus_s`, `spanplus_st`   |
-| [HiT-SRF](https://github.com/XiangZ-0/HiT-SR)							    | `hit_srf`, `hit_srf_medium`, `hit_srf_large`		|
-| [HMA](https://github.com/korouuuuu/HMA)							    | `hma`, `hma_medium`, `hma_large`				|
-| [MAN](https://github.com/icandle/MAN)								    | `man`, `man_tiny`, `man_light`				|
-| [light-SAFMN++](https://github.com/sunny2109/SAFMN/tree/main/AIS2024-RTSR)			    | `light_safmnpp`						|
-| [GRFormer](https://github.com/sisrformer/GRFormer)						    | `grformer`, `grformer_medium`, `grformer_large`  |
-| [EIMN](https://github.com/liux520/EIMN)							    | `eimn`, `eimn_a`, `eimn_l`			   |
-| [LMLT](https://github.com/jwgdmkj/LMLT)					| `lmlt`, `lmlt_tiny`, `lmlt_large`		   |
-| [DCT](https://github.com/zhengchen1999/DCT)					| `dct`						   |
-| [KRGN](https://github.com/ZhangDY827/KRGN)					| `krgn`					   |
-| [PlainUSR](https://github.com/icandle/PlainUSR)				| `plainusr`, `plainusr_ultra`, `plainusr_large`   | 
-| [HASN](https://github.com/nathan66666/HASN)					| `hasn`					   |
-| [FlexNet](https://github.com/umzi2/FlexNet)					| `flexnet`, `metaflexnet`			   |
-| [CFSR](https://github.com/Aitical/CFSR)					| `cfsr`					   |
-| [Sebica](https://github.com/idiosyncracies/Sebica)				| `sebica`, `sebica_mini`			   |
-| [NinaSR](https://github.com/Coloquinte/torchSR/blob/main/doc/NinaSR.md)	| `ninasr`, `ninasr_b0`, `ninasr_b2`		   |
-| [RCAN](https://github.com/yulunzhang/RCAN)					| `rcan`					   |
-| [MoESR](https://github.com/umzi2/MoESR)					| `moesr`					   |
-| [ASID](https://github.com/saturnian77/ASID)					| `asid`, `asid_d8`				   |
-| [MoSRV2](https://github.com/umzi2/MoSRV2)					| `mosrv2`					   |
-| [ESC](https://github.com/dslisleedh/ESC)					| `esc`, `esc_fp`, `esc_large`			   |
-| [CATANet](https://github.com/EquationWalker/CATANet)				| `catanet`					   |
-
+| arch                                                                                              | option                                                                           | date  | weight                                   |
+|---------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------|-------|------------------------------------------|
+| [Real-ESRGAN](https://github.com/xinntao/Real-ESRGAN)                                             | `esrgan`                                                                          | 2021  | Medium heavy                            |
+| [SRVGGNetCompact](https://github.com/XPixelGroup/BasicSR/blob/master/basicsr/archs/srvgg_arch.py) | `compact`                                                                         | 2021  | Ultra light                              |
+| [SwinIR](https://github.com/JingyunLiang/SwinIR)                                                  | `swinir_small`, `swinir_medium`, `swinir_large`                                  | 2021  | Medium heavy / Medium heavy / Heavy      |
+| [HAT](https://github.com/XPixelGroup/HAT)                                                         | `hat_s`, `hat_m`, `hat_l`                                                         | 2022  | Ultra heavy / Ultra heavy / Ultra heavy  |
+| [OmniSR](https://github.com/Francis0625/Omni-SR)                                                  | `omnisr`                                                                          | 2023  | Medium heavy                            |
+| [SRFormer](https://github.com/HVision-NKU/SRFormer)                                               | `srformer_light`, `srformer_medium`                                               | 2022  | Medium heavy / Heavy                     |
+| [DAT](https://github.com/zhengchen1999/dat)                                                       | `dat_small`, `dat_medium`, `dat_2`                                                | 2022  | Heavy / Heavy / Heavy                    |
+| [DITN](https://github.com/yongliuy/DITN)                                                          | `ditn`                                                                            | 2023  | Medium heavy                            |
+| [DCTLSA](https://github.com/zengkun301/DCTLSA)                                                    | `dctlsa`                                                                          | 2024  | Medium heavy                            |
+| [SPAN](https://github.com/hongyuanyu/SPAN)                                                        | `span`, `span_fast`                                                               | 2023  | Medium / Light                           |
+| [SPANPlus](https://github.com/umzi2/SPANPlus)                                                     | `spanplus`, `spanplus_sts`, `spanplus_s`, `spanplus_st`                           | 2024  | Medium / Ultra light / Medium / Light    |
+| [Real-CUGAN](https://github.com/bilibili/ailab)                                                   | `cugan`                                                                           | 2022  | Medium heavy                            |
+| [CRAFT](https://github.com/AVC2-UESTC/CRAFT-SR)                                                   | `craft`                                                                           | 2023  | Medium                                   |
+| [SAFMN](https://github.com/sunny2109/SAFMN)                                                       | `safmn`, `safmn_l`, `light_safmnpp`                                               | 2023  | Light / Medium / Light                   |
+| [RGT](https://github.com/zhengchen1999/RGT)                                                       | `rgt`, `rgt_s`                                                                    | 2023  | Medium heavy / Medium                    |
+| [ATD](https://github.com/LabShuHangGU/Adaptive-Token-Dictionary)                                  | `atd`, `atd_light`                                                                | 2024  | Heavy / Heavy                            |
+| [PLKSR](https://github.com/dslisleedh/PLKSR)                                                      | `plksr`, `plksr_tiny`                                                             | 2023  | Light / Light                            |
+| [RealPLKSR](https://github.com/dslisleedh/PLKSR/issues/4)                                         | `realplksr`, `realplksr_s`, `realplksr_l`                                         | 2023  | Medium / Medium / Medium heavy           |
+| [DRCT](https://github.com/ming053l/DRCT)                                                          | `drct`, `drct_l`, `drct_xl`, `drct_s`                                             | 2024  | Heavy / Ultra heavy / Ultra heavy / Heavy |
+| [MSDAN](https://github.com/Supereeeee/MSDAN)                                                      | `msdan`                                                                           | 2024  | Medium heavy                            |
+| [HiT-SRF](https://github.com/XiangZ-0/HiT-SR)                                                     | `hit_srf`, `hit_srf_medium`, `hit_srf_large`                                      | 2024  | Medium heavy / Heavy / Heavy             |
+| [HMA](https://github.com/korouuuuu/HMA)                                                           | `hma`, `hma_medium`, `hma_large`                                                  | 2024  | Medium heavy / Heavy / Heavy             |
+| [EQSR-GAN](https://github.com/justi8/EQSR-GAN)                                                    | `eqrsrgan`                                                                        | 2024  | Medium heavy                            |
+| [ASID](https://github.com/saturnian77/ASID)                                                       | `asid`, `asid_d8`                                                                 | 2024  | Medium / Medium heavy                     |
+| [MoSRV2](https://github.com/umzi2/MoSRV2)                                                         | `mosrv2`                                                                          | 2024  | Medium                                   |
+| [ESC](https://github.com/dslisleedh/ESC)                                                          | `esc`, `esc_light`, `esc_fp`, `esc_large`                                         | 2024  | Medium / Light / Light / Medium heavy     |
+| [CATANet](https://github.com/EquationWalker/CATANet)                                              | `catanet`                                                                         | 2024  | Medium heavy                            |
+| [LMLT](https://github.com/jwgdmkj/LMLT)                                                           | `lmlt`, `lmlt_tiny`, `lmlt_large`                                                 | 2024  | Medium / Light / Medium                   |
+| [PlainUSR](https://github.com/icandle/PlainUSR)                                                   | `plainusr`, `plainusr_ultra`, `plainusr_large`                                    | 2024  | Medium / Light / Medium heavy             |
+| [SebiCA](https://github.com/idiosyncracies/Sebica)                                                | `sebica`, `sebica_mini`                                                           | 2024  | Ultra light / Ultra light                 |
+| [GRFormer](https://github.com/sisrformer/GRFormer)                                                | `grformer`, `grformer_medium`, `grformer_large`                                   | 2024  | Medium heavy / Heavy / Heavy              |
+| [KRGN](https://github.com/ZhangDY827/KRGN)                                                        | `krgn`                                                                            | 2024  | Medium heavy                            |
+| [CFSR](https://github.com/Aitical/CFSR)                                                           | `cfsr`                                                                            | 2024  | Medium heavy                            |
+| [MAN](https://github.com/icandle/MAN)                                                             | `man`, `man_tiny`, `man_light`                                                    | 2024  | Medium heavy / Medium / Medium            |
+| [EIMN](https://github.com/liux520/EIMN)                                                           | `eimn`, `eimn_a`, `eimn_l`                                                        | 2024  | Medium / Medium / Medium                  |
+| [RCAN](https://github.com/yulunzhang/RCAN)                                                        | `rcan`                                                                            | 2018  | Medium                                   |
+| [DeSRGAN](https://github.com/neosr-project/neosr/blob/master/neosr/archs/desrgan_arch.py)         | `desrgan`                                                                         | 2024  | Medium heavy                            |
+| [DCTSR](https://github.com/neosr-project/neosr/blob/master/neosr/archs/dct_arch.py)               | `dct`                                                                             | 2024  | Medium                                   |
+| [MoeSR](https://github.com/umzi2/MoESR)                                                           | `moesr`                                                                           | 2024  | Medium heavy                            |
+| [PancamSR](https://github.com/neosr-project/neosr/blob/master/neosr/archs/pancam_arch.py)         | `pancamsr`                                                                        | 2024  | Medium                                   |
+| [SwinIR-Dense](https://github.com/neosr-project/neosr/blob/master/neosr/archs/swinirdense_arch.py) | `swinirdense`                                                                     | 2024  | Ultra heavy                              |
+| [FlexNet](https://github.com/umzi2/FlexNet)                                                       | `flexnet`, `metaflexnet`                                                          | 2024  | Medium heavy / Medium heavy               |
+| [NinaSR](https://github.com/Coloquinte/torchSR/blob/main/doc/NinaSR.md)                           | `ninasr`, `ninasr_b0`, `ninasr_b2`                                                | 2020  | Light / Light / Medium                    |
+| [HASN](https://github.com/nathan66666/HASN)                                                       | `hasn`                                                                            | 2024  | Medium heavy                            |
 > [!NOTE]
 > For all arch-specific parameters, [read the wiki](https://github.com/neosr-project/neosr/wiki/Arch%E2%80%90specific-options).
+> Weights reflect approximate resource demands (compute + VRAM) using the project's `architecture_categories.json` plus best-effort estimates for newer models.
 
 #### under testing
 
-| arch										| option					   |
-|-------------------------------------------------------------------------------|--------------------------------------------------|
-| [MFG-HMoE](https://github.com/Mr-Bamboo/MFG-HMoE)				| `mfghmoe`					   |
-| [MicroSR](https://github.com/YanHuiGUO/Submission-for-NTIRE-2025-SR-x4-)	| `microsr`					   |
-
+| arch                                                                          | option                          | date  | weight          |
+|-------------------------------------------------------------------------------|---------------------------------|-------|-----------------|
+| [MFG-HMoE](https://github.com/Mr-Bamboo/MFG-HMoE)                             | `mfghmoe`                      | 2024  | Ultra heavy     |
+| [MicroSR](https://github.com/YanHuiGUO/Submission-for-NTIRE-2025-SR-x4-)      | `microsr`, `microsr_light`     | 2025  | Light / Ultra light |
 
 ### [supported discriminators](https://github.com/neosr-project/neosr/wiki/Arch%E2%80%90specific-options#discriminators):
 
-| net                               				  		| option 		        |
-|-------------------------------------------------------------------------------|-------------------------------|
-| U-Net w/ SN 							  		| `unet` 		        |
-| [PatchGAN](https://github.com/NVIDIA/pix2pixHD) w/ SN		  		| `patchgan`			|
-| EA2FPN (bespoke, based on [A2-FPN](https://github.com/lironui/A2-FPN))	| `ea2fpn`			|
-| [DUnet](https://github.com/umzi2/DUnet)					| `dunet`			|
-| [MetaGan](https://github.com/umzi2/MetaGan)					| `metagan`			|
-
+| net                                                                           | option                        | date  |
+|-------------------------------------------------------------------------------|-------------------------------|-------|
+| U-Net w/ SN                                                                   | `unet`                        | 2015  |
+| [PatchGAN](https://github.com/NVIDIA/pix2pixHD) w/ SN                         | `patchgan`                    | 2018  |
+| EA2FPN (bespoke, based on [A2-FPN](https://github.com/lironui/A2-FPN))        | `ea2fpn`                      | 2024  |
+| [DUnet](https://github.com/umzi2/DUnet)                                       | `dunet`                       | 2024  |
+| [MetaGan](https://github.com/umzi2/MetaGan)                                   | `metagan`                     | 2024  |
+| [ResGAN](https://github.com/neosr-project/neosr/blob/master/neosr/archs/resgan_arch.py) | `resgan`               | 2023  |
 ### [supported optimizers](https://github.com/neosr-project/neosr/wiki/Optimizer-Options):
 
 | optimizer                                                                 | option             	 |
@@ -144,35 +215,36 @@ Where `config.toml` is a configuration file. Templates can be found in [options]
 
 ### [supported losses](https://github.com/neosr-project/neosr/wiki/Losses):
 
-| loss                                                                   							| option               		      	     |
+| loss                                                                                                                         | option                                      |
 |-------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------|
-| L1 Loss                                                                							| `L1Loss`, `l1_loss`  		     	     |
-| L2 Loss                                                                							| `MSELoss`, `mse_loss`    	     	     |
-| Huber Loss                                                             							| `HuberLoss`, `huber_loss` 	    	     |
-| CHC (Clipped Huber with Cosine Similarity Loss)			 							| `chc_loss`				     |
-| [NCC](https://github.com/neosr-project/neosr/wiki/Losses#ncc_opt-ncc_loss) (Normalized Cross-Correlation)			| `ncc_opt`, `ncc_loss`			     |
-| [Perceptual Loss](https://github.com/neosr-project/neosr/wiki/Losses#perceptual_opt-vgg_perceptual_loss)			| `perceptual_opt`, `vgg_perceptual_loss`    |
-| [GAN](https://github.com/neosr-project/neosr/wiki/Losses#gan_opt-gan_loss)							| `gan_opt`, `gan_loss`			     |
-| [MS-SSIM](https://github.com/lartpang/mssim.pytorch)			 							| `mssim_opt` `mssim_loss`		     |
-| [LDL Loss](https://github.com/csjliang/LDL)                            							| `ldl_opt`, `ldl_loss` 	             |
-| [Focal Frequency](https://github.com/EndlessSora/focal-frequency-loss) 							| `ff_opt`, `ff_loss`             	     |
-| [DISTS](https://github.com/dingkeyan93/DISTS)				 							| `dists_opt`, `dists_loss`		     |
-| [Wavelet Guided](https://github.com/mandalinadagi/WGSR)		 							| `wavelet_guided`			     |
-| [Perceptual Patch Loss](https://github.com/Suanmd/Patch-Loss-for-Super-Resolution)						| `perceptual_opt`, `patchloss`, `ipk`	     |
-| [Consistency Loss](https://github.com/neosr-project/neosr/wiki/Losses#consistency_opt-consistency_loss) (Oklab and CIE L*)	| `consistency_opt`, `consistency_loss`	     |
-| [KL Divergence](https://pytorch.org/docs/stable/generated/torch.nn.KLDivLoss.html)						| `kl_opt`, `kl_loss`			     |
-| [MS-SWD](https://github.com/real-hjq/MS-SWD)											| `msswd_opt`, `msswd_loss`		     |
-| [FDL](https://github.com/eezkni/FDL) + [DINOv2](https://github.com/facebookresearch/dinov2) backend				| `fdl_opt`, `fdl_loss`			     |
-
+| L1 Loss                                                                                                                      | `L1Loss`, `l1_loss`                         |
+| L2 Loss                                                                                                                      | `MSELoss`, `mse_loss`                       |
+| Huber Loss                                                                                                                   | `HuberLoss`, `huber_loss`                   |
+| CHC (Clipped Huber with Cosine Similarity Loss)                                                                              | `chc_loss`                                  |
+| [NCC](https://github.com/neosr-project/neosr/wiki/Losses#ncc_opt-ncc_loss) (Normalized Cross-Correlation)                    | `ncc_opt`, `ncc_loss`                       |
+| [Perceptual Loss](https://github.com/neosr-project/neosr/wiki/Losses#perceptual_opt-vgg_perceptual_loss)                     | `perceptual_opt`, `vgg_perceptual_loss`    |
+| ResNet Perceptual (ResNet feature extractor backend)                                                                         | `resnet_perceptual_loss`                    |
+| [GAN](https://github.com/neosr-project/neosr/wiki/Losses#gan_opt-gan_loss)                                                   | `gan_opt`, `gan_loss`                       |
+| [MS-SSIM](https://github.com/lartpang/mssim.pytorch)                                                                         | `mssim_opt` `mssim_loss`                    |
+| SSIM (single-scale structural similarity)                                                                                    | `ssim_loss`                                 |
+| [LDL Loss](https://github.com/csjliang/LDL)                                                                                  | `ldl_opt`, `ldl_loss`                       |
+| [Focal Frequency](https://github.com/EndlessSora/focal-frequency-loss)                                                       | `ff_opt`, `ff_loss`                         |
+| [DISTS](https://github.com/dingkeyan93/DISTS)                                                                                | `dists_opt`, `dists_loss`                   |
+| [Wavelet Guided](https://github.com/mandalinadagi/WGSR)                                                                      | `wavelet_guided`                            |
+| [Perceptual Patch Loss](https://github.com/Suanmd/Patch-Loss-for-Super-Resolution)                                           | `perceptual_opt`, `patchloss`, `ipk`        |
+| [Consistency Loss](https://github.com/neosr-project/neosr/wiki/Losses#consistency_opt-consistency_loss) (Oklab and CIE L*)   | `consistency_opt`, `consistency_loss`       |
+| [KL Divergence](https://pytorch.org/docs/stable/generated/torch.nn.KLDivLoss.html)                                           | `kl_opt`, `kl_loss`                         |
+| [MS-SWD](https://github.com/real-hjq/MS-SWD)                                                                                 | `msswd_opt`, `msswd_loss`                   |
+| [FDL](https://github.com/eezkni/FDL) + [DINOv2](https://github.com/facebookresearch/dinov2) backend                          | `fdl_opt`, `fdl_loss`                       |
 ### [supported metrics](https://github.com/neosr-project/neosr/wiki/Configuration-Walkthrough#validation)
 
-| metric 					    | option 		|
-|---------------------------------------------------|-------------------|
-| PSNR 						    | `calculate_psnr`  |
-| SSIM 						    | `calculate_ssim`  |
-| [DISTS](https://github.com/dingkeyan93/DISTS)     | `calculate_dists` |
-| [TOPIQ](https://github.com/chaofengc/IQA-PyTorch) | `calculate_topiq` |
-
+| metric                                            | option             |
+|---------------------------------------------------|--------------------|
+| PSNR                                              | `calculate_psnr`   |
+| SSIM                                              | `calculate_ssim`   |
+| [DISTS](https://github.com/dingkeyan93/DISTS)     | `calculate_dists`  |
+| [TOPIQ](https://github.com/chaofengc/IQA-PyTorch) | `calculate_topiq`  |
+| ILNIQE                                            | `calculate_ilniqe` |
 ### [supported augmentations](https://github.com/neosr-project/neosr/wiki/Configuration-Walkthrough#augmentations-aug_prob):
 
 | augmentation						| option	|
